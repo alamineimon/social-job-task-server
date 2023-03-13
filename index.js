@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 const app = express();
 
@@ -24,68 +24,124 @@ async function run() {
     const allPostCollection = client
       .db("SocialMedia_App")
       .collection("allpost");
-    const allUsersCollection = client
-      .db("SocialMedia_App")
-      .collection("users");
- 
+    const allUsersCollection = client.db("SocialMedia_App").collection("users");
 
     //post all post
-    app.post('/allpost', async (req, res) => {
+    app.post("/allpost", async (req, res) => {
       const users = req.body;
       const result = await allPostCollection.insertOne(users);
       res.send(result);
-  })
+    });
     //get all post
     app.get("/allpost", async (req, res) => {
       const query = {};
       const posts = await allPostCollection.find(query).toArray();
       res.send(posts);
-    });   
-    // post all user     
-    app.post('/users', async (req, res) => {
+    });
+    // post all user
+    app.post("/users", async (req, res) => {
       const users = req.body;
       const result = await allUsersCollection.insertOne(users);
       res.send(result);
-  })
-  // get all user
-  app.get('/users', async (req, res) => {
-      const query = {};
-      const state = await allUsersCollection.find(query).toArray();
-      res.send(state);
-  })
+    });
+    // // get all user
+    // app.get("/users", async (req, res) => {
+    //   const query = {};
+    //   const state = await allUsersCollection.find(query).toArray();
+    //   res.send(state);
+    // });
 
-      // user Profile Update
-      app.get("/profileUpdate/:email", async (req, res) => {
-        const email = req.params.email;
-        const query = { email: email };
-        const user = await allUsersCollection.findOne(query);
-        res.send(user);
-      });
-  
-      app.patch("/profileUpdate/:id", async (req, res) => {
-        const id = req.params.id;
-        const profile = req.body;
-        const query = { _id: ObjectId(id) };
-        const option = { upsert: true };
-        const updateDoc = {
-          $set: {
-            name: profile.name,
-            email: profile.email,
-            photoURL: profile.photoURL,
-            facebook: profile.facebook,
-            instagram: profile.instagram,
-            youTube: profile.youTube,
-            twitter: profile.twitter,
-            bio: profile.bio,
+
+    // get all user by id
+    app.get("/users/:email", async (req, res) => {
+      const userEmail = req.params.email;
+      const query = { email: userEmail };
+      const user = await allUsersCollection.findOne(query);
+      res.send(user);
+    });
+
+
+    //post like button
+    app.put("/allpost/like/:id", async (req, res) => {
+      const userEmail = req.query.email;
+      const postId = req.params.id;
+      //find the post
+      const query = {
+        _id: new ObjectId(postId),
+      };
+      const query2 = {
+        _id:new ObjectId(postId),
+        likes: { $all: [userEmail] },
+      };
+      const exist = await allPostCollection.findOne(query2);
+
+      if (!exist) {
+        const updatedDoc = {
+          $inc: { quantity: 1 },
+          $push: {
+            likes: userEmail,
           },
         };
-        const result = await allUsersCollection.updateOne(query, updateDoc, option);
-        res.send(result);
-      });
-  
+        const options = { upsert: true };
+        const result = await allPostCollection.updateOne(
+          query,
+          updatedDoc,
+          options
+        );
+        return res.send(result);
+      }
+      const updatedDoc = {
+        $inc: { quantity: -1 },
+        $pull: {
+          likes: userEmail,
+        },
+      };
+      const options = { upsert: true };
+      const result = await allPostCollection.updateOne(
+        query,
+        updatedDoc,
+        options
+      );
+      res.send(result);
+    });
 
-
-
+    //post like button
+    // app.put("/posts/like/:id", async (req, res) => {
+    //   const userEmail = req.query.email;
+    //   const postId = req.params.id;
+    //   //find the post
+    //   const query = { _id: ObjectId(postId) };
+    //   const query2 = { _id: ObjectId(postId), likes: { $all: [userEmail] } };
+    //   const exist = await allPostCollection.findOne(query2);
+    //   if (!exist) {
+    //     const updatedDoc = {
+    //       $inc: { quantity: 1 },
+    //       $push: {
+    //         likes: userEmail,
+    //       },
+    //     };
+    //     const options = { upsert: true };
+    //     const result = await allPostCollection.updateOne(
+    //       query,
+    //       updatedDoc,
+    //       options
+    //     );
+    //     return res.send(result);
+    //   }
+    //   const updatedDoc = {
+    //     $inc: { quantity: -1 },
+    //     $pull: {
+    //       likes: userEmail,
+    //     },
+    //   };
+    //   const options = { upsert: true };
+    //   const result = await allPostCollection.updateOne(
+    //     query,
+    //     updatedDoc,
+    //     options
+    //   );
+    //   res.send(result);
+    // });
   } finally {
   }
 }
