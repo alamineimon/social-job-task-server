@@ -50,7 +50,20 @@ async function run() {
     //   const state = await allUsersCollection.find(query).toArray();
     //   res.send(state);
     // });
-
+//for useAdmin hooks
+app.get("/users/admin/:email", async (req, res) => {
+  const email = req.params.email;
+  const query = { email: email };
+  const user = await allUsersCollection.findOne(query);
+  res.send({ isAdmin: user?.role === "Admin" });
+});
+//for delte a post
+app.delete("/userPostDelete/:id", async (req, res) => {
+  const id = req.params.id;
+  const filter = { _id:new ObjectId(id) };
+  const result = await allPostCollection.deleteOne(filter);
+  res.send(result);
+})
 
     // get all user by id
     app.get("/users/:email", async (req, res) => {
@@ -59,6 +72,26 @@ async function run() {
       const user = await allUsersCollection.findOne(query);
       res.send(user);
     });
+    app.patch("/users/:id", async (req, res) => {
+      const id = req.params.id;
+      const profile = req.body;
+      const query = { _id: ObjectId(id) };
+      const option = { upsert: true };
+      const updateDoc = {
+        $set: {
+          name: user.name,
+          email: user.email,
+          bio: data.title,
+          status: data.status,
+          location: data.location,
+          company: data.company,
+        },
+      };
+      const result = await allUsersCollection.updateOne(query, updateDoc, option);
+      res.send(result);
+    });
+
+
 
 
     //post like button
